@@ -1,0 +1,125 @@
+
+Add comments to your quarto document about your decisions and assumptions, this will be part of the grading.
+
+We cleaned the Snow_cover column during class. Inspiring yourself from the steps we followed, do the following in a quarto document:
+
+Start from cleaned snow_cover
+```{r}
+#| message: false  
+
+# Libraries
+library(tidyverse)
+
+# file names
+datadir_raw <- "data/raw/"
+
+datadir_processed <- "data/processed/"
+
+species_file <- "ASDN_Daily_species.csv"
+
+snowsurvey_file <- "ASDN_Snow_survey.csv"
+
+#read in cleaned snow survey data
+snowsurvey_csv <- read_csv(file.path(datadir_processed, 'snow_cover.csv'))
+```
+
+
+Clean the Water_cover column to transform it into the correct data type and respect expectations for a percentage
+```{r}
+#Looking at the current NAs ---
+snowsurvey_csv %>% 
+  count(Water_cover) %>% 
+  filter(is.na(as.numeric(Water_cover)))
+
+#Fixing the "."s in the data ---
+snowsurvey_fixed <- snowsurvey_csv %>% 
+  mutate(Water_cover = ifelse(Water_cover == ".", NA, Water_cover)) %>%  #replacing "."s with NAs
+#Fixing the "-"s in the data ---
+ mutate(Water_cover = ifelse(Water_cover == "-", NA, Water_cover)) %>% 
+#Fixing the "n/a"s in the data ---
+ mutate(Water_cover = ifelse(Water_cover == "n/a", NA, Water_cover)) %>% 
+#Fixing the "unk" in the data ---
+ mutate(Water_cover = ifelse(Water_cover == "unk", NA, Water_cover)) %>% 
+ mutate(Water_cover = ifelse(Water_cover == "<1", "0", Water_cover)) 
+  
+
+#Making the column numeric ---
+snowsurvey_fixed <- snowsurvey_fixed %>% 
+  mutate(Water_cover = as.numeric(Water_cover))
+
+#Checking the percentage value over 100 ---
+snowsurvey_fixed %>% 
+filter(Water_cover > 100)
+  
+#Making percentages over 100 NA values ---
+snowsurvey_fixed <- snowsurvey_fixed %>% 
+    mutate(Water_cover = ifelse(Water_cover > 100, NA, Water_cover)) 
+
+#I decided to replace values less than 1 with 0s and values over 100 with NAs because I assumed that values less than 0 were typos and didn't want to completely remove from data. Values over 100 I made NAs because I didn't want to assume those typos were equal to any value and instead need to rule out from any work we do moving forward.
+
+```
+
+Clean the Land_cover column to transform it into the correct data type and respect expectations for a percentage
+```{r}
+#Looking at the current NAs ---
+snowsurvey_csv %>% 
+  count(Land_cover) %>% 
+  filter(is.na(as.numeric(Land_cover)))
+
+#Fixing the "."s in the data ---
+snowsurvey_fixed <- snowsurvey_csv %>% 
+  mutate(Land_cover = ifelse(Land_cover == ".", NA, Land_cover)) %>%  #replacing "."s with NAs
+#Fixing the "-"s in the data ---
+ mutate(Land_cover = ifelse(Land_cover == "-", NA, Land_cover)) %>% 
+#Fixing the "n/a"s in the data ---
+ mutate(Land_cover = ifelse(Land_cover == "n/a", NA, Land_cover)) %>% 
+#Fixing the "unk" in the data ---
+ mutate(Land_cover = ifelse(Land_cover == "unk", NA, Land_cover)) %>% 
+ mutate(Land_cover = ifelse(Land_cover == "<1", "0", Land_cover)) 
+  
+
+#Making the column numeric ---
+snowsurvey_fixed <- snowsurvey_fixed %>% 
+  mutate(Land_cover = as.numeric(Land_cover))
+
+#Checking the percentage value over 100 ---
+snowsurvey_fixed %>% 
+filter(Land_cover > 100)
+  
+#Making percentages over 100 NA values ---
+snowsurvey_fixed <- snowsurvey_fixed %>% 
+    mutate(Land_cover = ifelse(Land_cover > 100, NA, Land_cover)) 
+
+#I decided to replace values less than 1 with 0s and values over 100 with NAs because I assumed that values less than 0 were typos and didn't want to completely remove from data. Values over 100 I made NAs because I didn't want to assume those typos were equal to any value and instead need to rule out from any work we do moving forward.
+
+```
+
+Use the relationship between the three cover columns (Snow, Water, Land) to infer missing values where possible and recompute the Total_cover column
+```{r}
+snowsurvey_fixed$Water_cover <- as.numeric(snowsurvey_fixed$Water_cover)
+glimpse(snowsurvey_fixed)
+#Confirming all the transformed columns are in the right format
+
+#Creating a new total cover column by adding snow, water, and land cover columns together
+snowsurvey_fixed <- snowsurvey_fixed %>% 
+  mutate(Total_cover2 = Snow_cover + Water_cover + Land_cover) 
+
+#Converting new column to numeric in order to filter
+snowsurvey_fixed$Total_cover2 <- as.numeric(snowsurvey_fixed$Total_cover2)
+
+#Filtering all total cover values that do not equal 100 in order to remove missing values
+all_cover <- snowsurvey_fixed2 %>% 
+ filter(Total_cover2 == 100)
+
+#Checking total cover only has values of 100
+unique(all_cover$Total_cover2)
+#nice, looks good!
+
+#I decided to filter out all values that are not 100 in the total cover column given I do not wnat to consider any rows that have missing values in any of my data wrangling/calculations. I'm making the assumption that missing data means these observations are not complete and should not be accurate representations of the snow survey data.
+```
+
+Ouputting a csv file named all_cover_fixed_YOURNAME.csv in the data/processed folder
+```{r}
+write_csv(all_cover, file.path(datadir_processed, "all_cover_fixed_CARLYCASWELL.csv"))
+```
+
